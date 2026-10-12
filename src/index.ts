@@ -392,11 +392,7 @@ function activate(api: OpenClawPluginApi): void {
   // -- Hooks --------------------------------------------------------------
 
   api.on("gateway_stop", async () => {
-    try {
-      await exporter.forceFlush();
-    } catch {
-      // best-effort
-    }
+    await exporter.forceFlush();
     await exporter.shutdown();
   });
 
@@ -928,7 +924,7 @@ function activate(api: OpenClawPluginApi): void {
 
         // Defer agent/root end so late llm_output / message_sent events can
         // still write to the trace before it's flushed.
-        setTimeout(async () => {
+        const finalizeTurn = async (): Promise<void> => {
           const finalOutput = ctx.lastOutput || rootCtx.lastOutput;
 
           if (pendingAgentSpan) {
@@ -1033,6 +1029,9 @@ function activate(api: OpenClawPluginApi): void {
           // forcing a flush. Mirrors the v3 500ms wait before flushAsync.
           await new Promise((r) => setTimeout(r, 500));
           await exporter.forceFlush();
+        };
+        setTimeout(() => {
+          void finalizeTurn().catch((error) => exporter.logFailure("Trace finalization", error));
         }, 200);
       } else {
         lastUserChannelId = undefined;

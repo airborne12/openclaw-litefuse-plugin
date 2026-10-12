@@ -34,6 +34,14 @@ export interface PluginApi {
 }
 
 const DEFAULT_BASE_URL = "https://litefuse.cloud";
+const FAILURE_LOG_INTERVAL_MS = 60_000;
+
+function describeFailure(error: unknown): string {
+  if (Array.isArray(error)) {
+    return error.map(describeFailure).join("; ") || "Unknown error";
+  }
+  return error instanceof Error ? error.message : String(error);
+}
 
 function buildAuthHeader(publicKey: string, secretKey: string): string {
   return "Basic " + Buffer.from(`${publicKey}:${secretKey}`).toString("base64");
@@ -68,6 +76,9 @@ export class LitefuseExporter {
   private readonly config: LitefusePluginConfig;
   private readonly provider: NodeTracerProvider;
   private readonly processors: LangfuseSpanProcessor[];
+  private lastFailureMessage: string | undefined;
+  private lastFailureLogAt = 0;
+  private suppressedFailures = 0;
 
   constructor(api: PluginApi, config: LitefusePluginConfig) {
     this.api = api;
@@ -103,14 +114,40 @@ export class LitefuseExporter {
   }
 
   async forceFlush(): Promise<void> {
-    await this.provider.forceFlush();
-    if (this.config.debug) {
-      this.api.logger.debug?.(`[Litefuse] Flushed ${this.processors.length} target(s)`);
+    try {
+      await this.provider.forceFlush();
+      this.lastFailureMessage = undefined;
+      this.suppressedFailures = 0;
+      if (this.config.debug) {
+        this.api.logger.debug?.(`[Litefuse] Flushed ${this.processors.length} target(s)`);
+      }
+    } catch (error) {
+      this.logFailure("Trace export", error);
     }
   }
 
   async shutdown(): Promise<void> {
-    await this.provider.shutdown();
-    this.api.logger.info(`[Litefuse] Plugin disposed (${this.processors.length} targets)`);
+    try {
+      await this.provider.shutdown();
+      this.api.logger.info(`[Litefuse] Plugin disposed (${this.processors.length} targets)`);
+    } catch (error) {
+      this.logFailure("Plugin shutdown", error);
+    }
+  }
+
+  logFailure(operation: string, error: unknown): void {
+    const message = `${operation} failed: ${describeFailure(error)}`;
+    const now = Date.now();
+    if (message === this.lastFailureMessage && now - this.lastFailureLogAt < FAILURE_LOG_INTERVAL_MS) {
+      this.suppressedFailures += 1;
+      return;
+    }
+    const suppressed = message === this.lastFailureMessage && this.suppressedFailures > 0
+      ? ` (${this.suppressedFailures} similar failures suppressed)`
+      : "";
+    this.api.logger.warn(`[Litefuse] ${message}${suppressed}`);
+    this.lastFailureMessage = message;
+    this.lastFailureLogAt = now;
+    this.suppressedFailures = 0;
   }
 }
