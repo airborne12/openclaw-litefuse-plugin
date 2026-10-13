@@ -17,11 +17,14 @@ cd ~/.openclaw/extensions/openclaw-litefuse-plugin && npm install
 
 ### From npm
 
+Check the public npm registry before installing. If `npm view` returns 404, use the GitHub installation above until a maintainer publishes the package.
+
 ```bash
-openclaw plugins install openclaw-litefuse-plugin
+npm view openclaw-litefuse-plugin version
+openclaw plugins install npm:openclaw-litefuse-plugin
 ```
 
-> **Note:** The npm version may lag behind the GitHub repository. For the latest features and fixes, install from GitHub.
+> **Note:** Before installing from npm, check that the published version contains the fix you need and includes `dist/index.js`. npm releases may lag behind GitHub.
 
 ## Configure
 
@@ -82,6 +85,28 @@ Send traces to multiple Litefuse instances simultaneously. All targets receive i
 }
 ```
 
+### Conversation hook access
+
+OpenClaw 2026.10.2 requires explicit conversation access for external plugins that use `llm_input`, `llm_output`, and `agent_end`. Add `hooks` next to `config` in the plugin entry:
+
+```jsonc
+{
+  "plugins": {
+    "entries": {
+      "openclaw-litefuse-plugin": {
+        "hooks": {
+          "allowConversationAccess": true
+        }
+      }
+    }
+  }
+}
+```
+
+Run `openclaw plugins inspect openclaw-litefuse-plugin --runtime` to check whether these hooks are registered. This permission lets the plugin read conversation content for tracing.
+
+OpenClaw 2026.10.2 ignores the plugin's existing `before_agent_start` hook. Agent span creation on that version needs a separate compatibility fix.
+
 ### Apply configuration
 
 ```bash
@@ -134,15 +159,24 @@ Litefuse calculates cost from its model pricing definitions, with per-tier prici
 ### From GitHub
 
 ```bash
-cd ~/.openclaw/extensions/openclaw-litefuse-plugin && git pull && npm install
+cd ~/.openclaw/extensions/openclaw-litefuse-plugin
+git pull --ff-only origin main
+npm ci
 openclaw gateway restart
 ```
 
 ### From npm
 
+This command updates an installation tracked by OpenClaw. Stop the Gateway before replacing a plugin package.
+
 ```bash
-openclaw plugins update
+openclaw plugins update openclaw-litefuse-plugin --dry-run
+openclaw gateway stop
+openclaw plugins update openclaw-litefuse-plugin
+openclaw gateway start
 ```
+
+`openclaw update` updates OpenClaw and maintains tracked plugin installations. Neither `openclaw update` nor `openclaw plugins update` pulls changes into an untracked, manually cloned Git directory. Running `npm update` inside that directory updates dependencies, not the plugin's Git source.
 
 ## Uninstall
 
