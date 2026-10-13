@@ -1,11 +1,12 @@
 {
   "name": "openclaw-litefuse-plugin",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "OpenClaw plugin for reporting AI agent execution traces to Litefuse. Supports multi-target and self-hosted Litefuse.",
   "type": "module",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
   "files": [
     "src",
+    "dist",
     "openclaw.plugin.json",
     "README.md"
   ],
@@ -14,11 +15,15 @@
     "dev": "tsc --watch",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
-    "test": "npm run build && node --test test/*.test.js"
+    "test": "npm run build && node --test test/*.test.js",
+    "prepack": "npm run build"
   },
   "openclaw": {
     "extensions": [
       "./src/index.ts"
+    ],
+    "runtimeExtensions": [
+      "./dist/index.js"
     ],
     "install": {
       "npmSpec": "openclaw-litefuse-plugin",
