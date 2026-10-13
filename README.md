@@ -103,7 +103,7 @@ OpenClaw 2026.10.2 requires explicit conversation access for external plugins th
 }
 ```
 
-Run `openclaw plugins inspect openclaw-litefuse-plugin --runtime` to check whether these hooks are registered. This permission lets the plugin read conversation content for tracing.
+Run `openclaw plugins inspect openclaw-litefuse-plugin --runtime` to check whether OpenClaw registered these hooks. This permission lets the plugin read conversation content for tracing.
 
 OpenClaw 2026.10.2 ignores the plugin's existing `before_agent_start` hook. Agent span creation on that version needs a separate compatibility fix.
 
@@ -167,14 +167,20 @@ openclaw gateway restart
 
 ### From npm
 
-This command updates an installation tracked by OpenClaw. Stop the Gateway before replacing a plugin package.
+Run `openclaw plugins inspect openclaw-litefuse-plugin` and confirm the install source is `npm`. These commands update a registry installation tracked by OpenClaw. Check the available version before stopping the Gateway.
 
 ```bash
+npm view openclaw-litefuse-plugin version
 openclaw plugins update openclaw-litefuse-plugin --dry-run
 openclaw gateway stop
 openclaw plugins update openclaw-litefuse-plugin
 openclaw gateway start
+openclaw plugins inspect openclaw-litefuse-plugin --runtime
 ```
+
+If the install spec pins an exact version, use `openclaw plugins update openclaw-litefuse-plugin@latest --dry-run` for the preview and `openclaw plugins update openclaw-litefuse-plugin@latest` for the update. If the preview reports no new version, the Gateway does not need a restart.
+
+For a manual Git installation, stop the Gateway and move the cloned plugin directory outside `~/.openclaw/extensions`. Remove any explicit `plugins.load.paths` entry for it. Then run `openclaw plugins install npm:openclaw-litefuse-plugin` and start the Gateway.
 
 `openclaw update` updates OpenClaw and maintains tracked plugin installations. Neither `openclaw update` nor `openclaw plugins update` pulls changes into an untracked, manually cloned Git directory. Running `npm update` inside that directory updates dependencies, not the plugin's Git source.
 
