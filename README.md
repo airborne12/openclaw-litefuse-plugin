@@ -167,22 +167,17 @@ openclaw gateway restart
 
 ### From npm
 
-Run `openclaw plugins inspect openclaw-litefuse-plugin` and confirm the install source is `npm`. These commands update a registry installation tracked by OpenClaw. Check the available version before stopping the Gateway.
+For an OpenClaw-managed npm installation, preview the update and then install the latest version:
 
 ```bash
-npm view openclaw-litefuse-plugin version
-openclaw plugins update openclaw-litefuse-plugin --dry-run
+openclaw plugins update openclaw-litefuse-plugin@latest --dry-run
 openclaw gateway stop
-openclaw plugins update openclaw-litefuse-plugin
+openclaw plugins update openclaw-litefuse-plugin@latest
 openclaw gateway start
 openclaw plugins inspect openclaw-litefuse-plugin --runtime
 ```
 
-If the install spec pins an exact version, use `openclaw plugins update openclaw-litefuse-plugin@latest --dry-run` for the preview and `openclaw plugins update openclaw-litefuse-plugin@latest` for the update. If the preview reports no new version, the Gateway does not need a restart.
-
-For a manual Git installation, stop the Gateway and move the cloned plugin directory outside `~/.openclaw/extensions`. Remove any explicit `plugins.load.paths` entry for it. Then run `openclaw plugins install npm:openclaw-litefuse-plugin` and start the Gateway.
-
-`openclaw update` updates OpenClaw and maintains tracked plugin installations. Neither `openclaw update` nor `openclaw plugins update` pulls changes into an untracked, manually cloned Git directory. Running `npm update` inside that directory updates dependencies, not the plugin's Git source.
+If the preview shows no update, keep the Gateway running. For a manual Git installation, use the Git commands above; `npm update` inside that directory updates dependencies, not the plugin source.
 
 ## Uninstall
 
